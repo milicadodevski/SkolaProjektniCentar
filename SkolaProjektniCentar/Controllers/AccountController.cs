@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using System.Web;
 using System.Web.Mvc;
 using Microsoft.AspNet.Identity;
+using Microsoft.AspNet.Identity.EntityFramework;
 using Microsoft.AspNet.Identity.Owin;
 using Microsoft.Owin.Security;
 using SkolaProjektniCentar.Models;
@@ -21,13 +22,34 @@ namespace SkolaProjektniCentar.Controllers
         public AccountController()
         {
         }
-
+        
         public AccountController(ApplicationUserManager userManager, ApplicationSignInManager signInManager )
         {
             UserManager = userManager;
             SignInManager = signInManager;
         }
 
+        [HttpPost]
+        [AllowAnonymous]
+        public ActionResult Login(SkolaProjektniCentar.Korisnik korisnik)
+        {
+            using (SkolaContext _context = new SkolaContext())
+            {
+                var details = _context.Korisnik.Where(x => x.KorisnickoIme == korisnik.KorisnickoIme && x.Lozinka == korisnik.Lozinka).FirstOrDefault();
+                if (details == null)
+                {
+                    //korisnik. = "Pogresna lozinka ili nepostojece korisnicko ime";
+                    TempData["msg"] = "<script>alert('Pogresna lozinka ili nepostojece korisnicko ime');</script>";
+                    return View("Index", korisnik);
+                }
+                else
+                {
+                    Session["PravoPristupa"] = details.PravoPristupa;
+                    Session["KorisnickoIme"] = details.KorisnickoIme;
+                    return RedirectToAction("Index", "Home");
+                }
+            }
+        }
         public ApplicationSignInManager SignInManager
         {
             get
@@ -54,42 +76,42 @@ namespace SkolaProjektniCentar.Controllers
 
         //
         // GET: /Account/Login
-        [AllowAnonymous]
-        public ActionResult Login(string returnUrl)
-        {
-            ViewBag.ReturnUrl = returnUrl;
-            return View();
-        }
+        //[AllowAnonymous]
+        //public ActionResult Login(string returnUrl)
+        //{
+        //    ViewBag.ReturnUrl = returnUrl;
+        //    return View();
+        //}
 
         //
         // POST: /Account/Login
-        [HttpPost]
-        [AllowAnonymous]
-        [ValidateAntiForgeryToken]
-        public async Task<ActionResult> Login(LoginViewModel model, string returnUrl)
-        {
-            if (!ModelState.IsValid)
-            {
-                return View(model);
-            }
+        //[HttpPost]
+        //[AllowAnonymous]
+        //[ValidateAntiForgeryToken]
+        //public async Task<ActionResult> Login(LoginViewModel model, string returnUrl)
+        //{
+        //    if (!ModelState.IsValid)
+        //    {
+        //        return View(model);
+        //    }
 
-            // This doesn't count login failures towards account lockout
-            // To enable password failures to trigger account lockout, change to shouldLockout: true
-            var result = await SignInManager.PasswordSignInAsync(model.Email, model.Password, model.RememberMe, shouldLockout: false);
-            switch (result)
-            {
-                case SignInStatus.Success:
-                    return RedirectToLocal(returnUrl);
-                case SignInStatus.LockedOut:
-                    return View("Lockout");
-                case SignInStatus.RequiresVerification:
-                    return RedirectToAction("SendCode", new { ReturnUrl = returnUrl, RememberMe = model.RememberMe });
-                case SignInStatus.Failure:
-                default:
-                    ModelState.AddModelError("", "Invalid login attempt.");
-                    return View(model);
-            }
-        }
+        //    // This doesn't count login failures towards account lockout
+        //    // To enable password failures to trigger account lockout, change to shouldLockout: true
+        //    var result = await SignInManager.PasswordSignInAsync(model.Email, model.Password, model.RememberMe, shouldLockout: false);
+        //    switch (result)
+        //    {
+        //        case SignInStatus.Success:
+        //            return RedirectToLocal(returnUrl);
+        //        case SignInStatus.LockedOut:
+        //            return View("Lockout");
+        //        case SignInStatus.RequiresVerification:
+        //            return RedirectToAction("SendCode", new { ReturnUrl = returnUrl, RememberMe = model.RememberMe });
+        //        case SignInStatus.Failure:
+        //        default:
+        //            ModelState.AddModelError("", "Invalid login attempt.");
+        //            return View(model);
+        //    }
+        //}
 
         //
         // GET: /Account/VerifyCode
@@ -155,6 +177,10 @@ namespace SkolaProjektniCentar.Controllers
                 var result = await UserManager.CreateAsync(user, model.Password);
                 if (result.Succeeded)
                 {
+                    //var uloga = new RoleStore<IdentityRole>(new ApplicationDbContext());
+                    //var roleManager = new RoleManager<IdentityRole>(uloga);
+                    //roleManager.CreateAsync(new IdentityRole(""))
+
                     await SignInManager.SignInAsync(user, isPersistent:false, rememberBrowser:false);
                     
                     // For more information on how to enable account confirmation and password reset please visit https://go.microsoft.com/fwlink/?LinkID=320771
